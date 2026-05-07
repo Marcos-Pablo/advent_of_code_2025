@@ -2,14 +2,14 @@ use std::io::{self, Write};
 
 fn main() {
     println!("Welcome to Advent Of Code 2025!");
+    let mut input = String::new();
 
     loop {
         println!("Type \"q\" to quit");
         print!("Select the day you want to solve (1-25): ");
         io::stdout().flush().unwrap();
 
-        let mut input = String::new();
-
+        input.clear();
         io::stdin()
             .read_line(&mut input)
             .expect("Error reading line");
