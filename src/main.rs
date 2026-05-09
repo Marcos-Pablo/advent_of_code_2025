@@ -1,5 +1,7 @@
 use std::io::{self, Write};
 
+mod day1;
+
 fn main() {
     println!("Welcome to Advent Of Code 2025!");
     let mut input = String::new();
@@ -27,6 +29,11 @@ fn main() {
             }
         };
 
-        println!("Running day {day} against the provided input\n")
+        println!("Running day {day} against the provided input\n");
+
+        match day {
+            1 => day1::solve(),
+            _ => println!("day {day} solution not available yet"),
+        }
     }
 }
