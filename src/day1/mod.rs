@@ -1,17 +1,8 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-};
+use std::io::BufRead;
 
 enum Rotation {
     Left { num_rotations: i32 },
     Right { num_rotations: i32 },
-}
-
-fn get_file_reader() -> BufReader<File> {
-    let file_path = "./src/day1/input.txt";
-    let file = File::open(file_path).expect("Error reading file");
-    BufReader::new(file)
 }
 
 fn parse_rotations(reader: impl BufRead) -> impl Iterator<Item = Rotation> {
@@ -37,7 +28,8 @@ fn parse_rotations(reader: impl BufRead) -> impl Iterator<Item = Rotation> {
 }
 
 pub fn solve() {
-    let reader = get_file_reader();
+    let file_path = "./src/day1/input.txt";
+    let reader = super::get_file_reader(file_path);
     let rotations = parse_rotations(reader);
 
     let mut curr_pos: i32 = 50;

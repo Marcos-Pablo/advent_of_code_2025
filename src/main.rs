@@ -1,6 +1,10 @@
-use std::io::{self, Write};
+use std::{
+    fs::File,
+    io::{self, BufRead, BufReader, Write},
+};
 
 mod day1;
+mod day2;
 
 fn main() {
     println!("Welcome to Advent Of Code 2025!");
@@ -33,7 +37,13 @@ fn main() {
 
         match day {
             1 => day1::solve(),
+            2 => day2::solve(),
             _ => println!("day {day} solution not available yet"),
         }
     }
+}
+
+fn get_file_reader(file_path: &str) -> impl BufRead {
+    let file = File::open(file_path).expect("Error opening file");
+    BufReader::new(file)
 }
