@@ -1,11 +1,11 @@
-use std::{cmp::max, fs};
+use std::fs;
 
 pub fn solve() {
     let banks = parse_batteries_banks();
 
     let mut max_joltage_part1 = 0;
     for bank in &banks {
-        let max_joltage = get_max_joltage_part1(bank);
+        let max_joltage = get_max_joltage(bank, 2);
         max_joltage_part1 += max_joltage;
     }
 
@@ -13,7 +13,7 @@ pub fn solve() {
 
     let mut max_joltage_part2 = 0;
     for bank in &banks {
-        let max_joltage = get_max_joltage_part2(bank);
+        let max_joltage = get_max_joltage(bank, 12);
         max_joltage_part2 += max_joltage;
     }
 
@@ -28,56 +28,26 @@ fn parse_batteries_banks() -> Vec<Vec<char>> {
         .collect()
 }
 
-fn get_max_joltage_part1(bank: &Vec<char>) -> u32 {
-    let mut max_joltage = 0;
+fn get_max_joltage(bank: &Vec<char>, size: usize) -> u64 {
+    let mut best_combination = String::new();
+    let mut remaining = size;
+    let mut start = 0;
 
-    for i in 0..bank.len() - 1 {
-        let left = bank[i];
-        let mut j = i + 1;
-        while j < bank.len() {
-            let right = bank[j];
-
-            let val: u32 = format!("{left}{right}")
-                .parse()
-                .expect("Error parsing batteries pair");
-
-            max_joltage = max(max_joltage, val);
-            j += 1;
+    while remaining > 0 {
+        let mut largest = start;
+        for i in start..=bank.len() - remaining {
+            if bank[i] > bank[largest] {
+                largest = i;
+            }
         }
+        remaining -= 1;
+        start = largest + 1;
+        best_combination += &bank[largest].to_string();
     }
 
-    max_joltage
-}
+    let best_combination: u64 = best_combination
+        .parse()
+        .expect("Error parsing best combination");
 
-fn get_max_joltage_part2(bank: &Vec<char>) -> u64 {
-    let mut max_joltage = 0;
-    let mut curr: Vec<char> = Vec::new();
-
-    take_or_skip(bank, &mut curr, &mut max_joltage, 0);
-
-    max_joltage
-}
-
-fn take_or_skip(bank: &Vec<char>, curr: &mut Vec<char>, max_joltage: &mut u64, i: usize) {
-    if curr.len() == 12 {
-        let val: String = curr.iter().collect();
-        let val: u64 = val
-            .parse()
-            .unwrap_or_else(|_| panic!("Error parsing val: {val}"));
-
-        *max_joltage = max(*max_joltage, val);
-        return;
-    }
-
-    if i >= bank.len() {
-        return;
-    }
-
-    // Take
-    curr.push(bank[i]);
-    take_or_skip(bank, curr, max_joltage, i + 1);
-    curr.pop();
-
-    // Skip
-    take_or_skip(bank, curr, max_joltage, i + 1);
+    best_combination
 }
