@@ -1,4 +1,4 @@
-use std::{fs, ops::RangeInclusive};
+use std::{fs, ops::Range};
 
 pub fn solve() {
     let inventory = parse_inventory();
@@ -9,11 +9,18 @@ pub fn solve() {
         .filter(|id| inventory.fresh_ranges.iter().any(|r| r.contains(id)))
         .count();
 
+    let unique_fresh_ids = inventory
+        .fresh_ranges
+        .iter()
+        .map(|r| r.end - r.start)
+        .sum::<u64>();
+
     println!("{fresh_ingredients_count} of the available ingredient IDs are fresh");
+    println!("{unique_fresh_ids} IDs are fresh in total");
 }
 
 struct Inventory {
-    fresh_ranges: Vec<RangeInclusive<u64>>,
+    fresh_ranges: Vec<Range<u64>>,
     ingredient_ids: Vec<u64>,
 }
 
@@ -26,26 +33,39 @@ fn parse_inventory() -> Inventory {
         panic!("Error spliting ranges and ids")
     };
 
-    let mut fresh_ranges = Vec::new();
-    for line in ranges.lines() {
-        let Some((start, end)) = line.split_once("-") else {
-            panic!("Error spliting range line")
-        };
+    let mut fresh_ranges: Vec<Range<u64>> = ranges
+        .lines()
+        .map(|line| {
+            let Some((start, end)) = line.split_once('-') else {
+                panic!("Error spliting range");
+            };
 
-        let start: u64 = start.parse().expect("Error parsing range to usize");
-        let end: u64 = end.parse().expect("Error parsing range to usize");
+            let start: u64 = start.parse().expect("Error parsing range to usize");
+            let end: u64 = end.parse().expect("Error parsing range to usize");
+            start..end + 1
+        })
+        .collect();
 
-        fresh_ranges.push(start..=end);
+    fresh_ranges.sort_by_key(|r| (r.start, r.end));
+
+    let mut merged: Vec<Range<u64>> = Vec::new();
+    for range in fresh_ranges {
+        if let Some(last) = merged.last_mut() {
+            if range.start <= last.end {
+                last.end = last.end.max(range.end);
+                continue;
+            }
+        }
+        merged.push(range);
     }
 
-    let mut ingredient_ids = Vec::new();
-    for line in ids.lines() {
-        let id: u64 = line.parse().expect("Error parsing id to u64");
-        ingredient_ids.push(id);
-    }
+    let ingredient_ids: Vec<u64> = ids
+        .lines()
+        .map(|line| line.parse().expect("Error parsing line to u64"))
+        .collect();
 
     Inventory {
-        fresh_ranges,
+        fresh_ranges: merged,
         ingredient_ids,
     }
 }
