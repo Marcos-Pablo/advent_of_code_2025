@@ -1,6 +1,7 @@
 use std::io::{self, Write};
 
 mod day1;
+mod day10;
 mod day2;
 mod day3;
 mod day4;
@@ -49,6 +50,7 @@ pub fn run() {
             7 => day7::solve(),
             8 => day8::solve(),
             9 => day9::solve(),
+            10 => day10::solve(),
             _ => println!("day {day} solution not available yet"),
         }
     }
