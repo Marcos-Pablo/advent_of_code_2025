@@ -1,11 +1,13 @@
 use std::fs;
+use z3::ast::Int;
+use z3::{Optimize, SatResult};
 
 pub fn solve() {
     let mut machines = parse_machines();
 
     let mut total_presses = 0;
     for machine in machines.iter_mut() {
-        total_presses += min_presses_to_valid_state(machine, 0);
+        total_presses += min_presses_switches(machine, 0);
     }
 
     println!(
@@ -14,7 +16,8 @@ pub fn solve() {
 
     let mut total_presses = 0;
     for machine in machines.iter_mut() {
-        total_presses += min_presses_to_valid_joltage(machine, 0);
+        let matrix = build_matrix(machine);
+        total_presses += min_presses_joltages(&matrix);
     }
 
     println!(
@@ -41,46 +44,70 @@ impl Machine {
             .zip(self.current_state.iter())
             .any(|(a, b)| *a != *b)
     }
-
-    fn is_joltages_valid(&self) -> bool {
-        !self.joltages.iter().any(|&jolt| jolt > 0)
-    }
 }
 
-fn min_presses_to_valid_joltage(machine: &mut Machine, button: usize) -> u32 {
-    if button == machine.buttons.len() {
-        return if machine.is_joltages_valid() {
-            0
-        } else {
-            u32::MAX
-        };
+fn build_matrix(machine: &mut Machine) -> Vec<Vec<i64>> {
+    let rows = machine.joltages.len();
+    let cols = machine.buttons.len();
+    let mut matrix = vec![vec![0i64; cols]; rows];
+
+    for (button_idx, button) in machine.buttons.iter().enumerate() {
+        for &position in button {
+            matrix[position][button_idx] = 1;
+        }
     }
 
-    let max_count = machine.buttons[button]
+    for (row, jolt) in machine.joltages.iter().enumerate() {
+        matrix[row].push(*jolt as i64);
+    }
+
+    matrix
+}
+
+fn min_presses_joltages(matrix: &Vec<Vec<i64>>) -> i64 {
+    let opt = Optimize::new();
+
+    let n_buttons = matrix[0].len() - 1; // last column is the augmented RHS
+
+    let vars: Vec<Int> = (0..n_buttons)
+        .map(|i| Int::new_const(format!("x{i}")))
+        .collect();
+
+    let zero = Int::from_i64(0);
+
+    for v in &vars {
+        opt.assert(&v.ge(&zero));
+    }
+
+    for row in matrix.iter() {
+        let terms: Vec<&Int> = row[..n_buttons]
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| **c != 0)
+            .map(|(j, _)| &vars[j])
+            .collect();
+
+        let sum = Int::add(&terms);
+        let rhs = Int::from_i64(row[n_buttons]);
+        opt.assert(&sum.eq(&rhs));
+    }
+
+    let all_refs: Vec<&Int> = vars.iter().collect();
+    let total = Int::add(&all_refs);
+    opt.minimize(&total);
+
+    assert_eq!(opt.check(&[]), SatResult::Sat);
+    let model = opt.get_model().expect("Z3 returned Sat but no model");
+
+    let answer: i64 = vars
         .iter()
-        .map(|&i| machine.joltages[i])
-        .min()
-        .expect("Error getting max count");
+        .map(|v| model.eval(v, true).unwrap().as_i64().unwrap())
+        .sum();
 
-    let mut min_presses = u32::MAX;
-
-    for count in 0..=max_count {
-        for &i in &machine.buttons[button] {
-            machine.joltages[i] -= 1 * count;
-        }
-
-        let result = min_presses_to_valid_joltage(machine, button + 1).saturating_add(count);
-        min_presses = min_presses.min(result);
-
-        for &i in &machine.buttons[button] {
-            machine.joltages[i] += 1 * count;
-        }
-    }
-
-    min_presses
+    answer
 }
 
-fn min_presses_to_valid_state(machine: &mut Machine, button: usize) -> u32 {
+fn min_presses_switches(machine: &mut Machine, button: usize) -> u32 {
     if machine.is_switches_valid() {
         return 0;
     }
@@ -89,13 +116,13 @@ fn min_presses_to_valid_state(machine: &mut Machine, button: usize) -> u32 {
         return u32::MAX;
     }
 
-    let skip = min_presses_to_valid_state(machine, button + 1);
+    let skip = min_presses_switches(machine, button + 1);
 
     for &i in &machine.buttons[button] {
         machine.current_state[i] = !machine.current_state[i];
     }
 
-    let mut press = min_presses_to_valid_state(machine, button + 1);
+    let mut press = min_presses_switches(machine, button + 1);
     if press != u32::MAX {
         press += 1;
     }
