@@ -10,12 +10,12 @@ pub fn solve() {
     println!("In total, there are {num_diff_paths_pt1} different paths leading from you to out.");
 
     let num_diff_paths_pt2 = {
-        calc_num_diff_paths(&graph, "svr", "dac")
+        (calc_num_diff_paths(&graph, "svr", "dac")
             * calc_num_diff_paths(&graph, "dac", "fft")
-            * calc_num_diff_paths(&graph, "fft", "out")
-            + calc_num_diff_paths(&graph, "svr", "fft")
+            * calc_num_diff_paths(&graph, "fft", "out"))
+            + (calc_num_diff_paths(&graph, "svr", "fft")
                 * calc_num_diff_paths(&graph, "fft", "dac")
-                * calc_num_diff_paths(&graph, "dac", "out")
+                * calc_num_diff_paths(&graph, "dac", "out"))
     };
 
     println!(
@@ -23,25 +23,23 @@ pub fn solve() {
     );
 }
 
-fn calc_num_diff_paths(graph: &HashMap<String, HashSet<String>>, from: &str, to: &str) -> u32 {
-    dfs(graph, &mut HashSet::new(), from, to)
+fn calc_num_diff_paths(graph: &HashMap<String, HashSet<String>>, from: &str, to: &str) -> u64 {
+    dfs(graph, &mut HashMap::new(), from, to)
 }
 
 fn dfs<'a>(
     graph: &'a HashMap<String, HashSet<String>>,
-    visited: &mut HashSet<&'a str>,
+    memo: &mut HashMap<&'a str, u64>,
     device: &'a str,
     to: &str,
-) -> u32 {
+) -> u64 {
     if device == to {
         return 1;
     }
 
-    if let Some(_) = visited.get(device) {
-        return 0;
+    if let Some(&cached) = memo.get(device) {
+        return cached;
     }
-
-    visited.insert(device);
 
     let neighbours = graph
         .get(device)
@@ -49,10 +47,10 @@ fn dfs<'a>(
     let mut count = 0;
 
     for neighbour in neighbours {
-        count += dfs(graph, visited, neighbour, to);
+        count += dfs(graph, memo, neighbour, to);
     }
 
-    visited.remove(device);
+    memo.insert(device, count);
 
     count
 }
